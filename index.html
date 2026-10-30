@@ -1,1 +1,278 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#0a1e32"><title>Dr.i 病毒生存戰 | Pixel Survivor</title><link rel="stylesheet" href="style.css"></head><body><main id="game"><canvas id="screen" aria-label="Dr.i 醫生對抗病毒的生存遊戲"></canvas><div id="hud"><div class="toprow"><div class="brand">🩺 DR.i <span>病毒生存戰</span></div><div class="stats"><span id="clock">00:00</span><span id="kills">☣ 0</span><button id="pause" title="暫停">Ⅱ</button></div></div><div class="bar hp"><div id="hpbar"></div><b id="hptext">100 / 100</b></div><div class="bar xp"><div id="xpbar"></div><b id="xptext">LV 1 · 0 / 8 XP</b></div><div id="skillbar"></div></div><div id="toast"></div><div id="joystick"><div id="stick"></div></div><section class="overlay" id="menu"><div class="panel intro"><div class="pill">PIXEL SURVIVOR · 原創醫療主題</div><img src="assets/dri-pixel.png" alt="Dr.i 醫生像素主角" class="hero"><h1>DR.i <em>病毒生存戰</em></h1><p>病毒大軍正在入侵！操控 Dr.i 醫生，施放醫療技能，自動擊退病毒，撿拾經驗晶片，打造最強防護組合。</p><div class="how"><span>⌨ WASD / 方向鍵移動</span><span>📱 觸控虛擬搖桿</span><span>✨ 技能自動攻擊</span></div><button class="primary" id="start">▶ 開始防疫任務</button><small id="best">最佳紀錄：尚無</small></div></section><section class="overlay hidden" id="levelpanel"><div class="panel choice"><div class="pill">LEVEL UP!</div><h2>選擇一項醫療強化</h2><p>選擇你的下一項能力，病毒不會等待太久。</p><div id="cards"></div></div></section><section class="overlay hidden" id="pausepanel"><div class="panel"><h2>⏸ 任務暫停</h2><p>調整好位置，繼續守護健康。</p><button class="primary" id="resume">▶ 繼續遊戲</button><button class="secondary" id="quit">返回主選單</button></div></section><section class="overlay hidden" id="overpanel"><div class="panel"><div class="pill">MISSION REPORT</div><h2 id="endtitle">任務結束</h2><div id="result"></div><button class="primary" id="again">↻ 再挑戰一次</button><button class="secondary" id="home">返回主選單</button></div></section></main><script src="game.js"></script></body></html>
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0">
+  <title>IZO 萬粉健康應援祭｜分享好友</title>
+
+  <!-- LINE LIFF SDK -->
+  <script
+    src="https://static.line-scdn.net/liff/edge/2/sdk.js">
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, "Noto Sans TC", sans-serif;
+      background: #f3f7fa;
+      color: #22374c;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 430px;
+      margin: 40px auto;
+      padding: 30px 22px;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 6px 22px #22374c14;
+    }
+
+    h1 { font-size: 25px; }
+    p { line-height: 1.8; }
+
+    .share-btn {
+      display: block;
+      width: 100%;
+      background: #06c755;
+      color: white;
+      border: none;
+      padding: 16px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 10px;
+      cursor: pointer;
+      margin-top: 25px;
+    }
+
+    .share-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    #status {
+      margin-top: 18px;
+      font-size: 14px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <h1>萬粉健康應援祭</h1>
+    <p>
+      邀請好友一起參加！<br>
+      健康好禮週週抽<br>
+      挑戰萬粉終極大獎
+    </p>
+
+    <button
+      id="shareBtn"
+      class="share-btn"
+      onclick="shareToFriends()"
+      disabled>
+      初始化中...
+    </button>
+
+    <div id="status" role="status" aria-live="polite">
+      正在連線 LINE...
+    </div>
+  </main>
+
+  <script>
+    // ===== 請修改以下設定 =====
+
+    const LIFF_ID = "YOUR_LIFF_ID";
+
+    // 換成真正公開的活動網址
+    const ACTIVITY_URL = "https://example.com/campaign";
+
+    // ===== LIFF 初始化 =====
+
+    const shareBtn = document.getElementById("shareBtn");
+    const statusEl = document.getElementById("status");
+
+    let initialized = false;
+
+    function setStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    async function initializeLIFF() {
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        initialized = true;
+
+        // 外部瀏覽器需登入 LINE
+        if (!liff.isLoggedIn()) {
+          shareBtn.disabled = false;
+          shareBtn.textContent = "使用 LINE 登入";
+          setStatus("請先登入 LINE");
+          return;
+        }
+
+        // 檢查 Share Target Picker 是否可用
+        if (!liff.isApiAvailable("shareTargetPicker")) {
+          shareBtn.disabled = true;
+          shareBtn.textContent = "目前無法分享";
+          setStatus("此環境不支援 LINE 好友分享功能");
+          return;
+        }
+
+        shareBtn.disabled = false;
+        shareBtn.textContent = "分享給 LINE 好友";
+        setStatus("已準備完成，請點擊分享");
+
+      } catch (error) {
+        console.error("LIFF 初始化失敗", error);
+        setStatus("LIFF 初始化失敗：" + error.message);
+        shareBtn.textContent = "初始化失敗";
+      }
+    }
+
+    // ===== Flex Message 卡片 =====
+
+    function createFlexMessage() {
+      return {
+        type: "flex",
+        altText: "IZO 萬粉健康應援祭，邀請你一起參加！",
+        contents: {
+          type: "bubble",
+          size: "mega",
+          header: {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#22374C",
+            paddingAll: "22px",
+            contents: [
+              {
+                type: "text",
+                text: "IZO 昊霖預防醫學機構",
+                color: "#A9DEFA",
+                size: "sm"
+              },
+              {
+                type: "text",
+                text: "萬粉健康應援祭",
+                weight: "bold",
+                size: "xl",
+                color: "#FFFFFF",
+                margin: "md",
+                wrap: true
+              },
+              {
+                type: "text",
+                text: "健康好禮週週抽！",
+                color: "#FFFFFF",
+                size: "md",
+                margin: "sm"
+              }
+            ]
+          },
+
+          body: {
+            type: "box",
+            layout: "vertical",
+            paddingAll: "22px",
+            spacing: "md",
+            contents: [
+              {
+                type: "text",
+                text: "每週抽出 3 位幸運兒",
+                size: "lg",
+                weight: "bold",
+                color: "#22374C"
+              },
+              {
+                type: "text",
+                text: "邀請好友一起參加健康互動活動，挑戰 10,000 粉絲終極大獎！",
+                size: "sm",
+                wrap: true,
+                color: "#555555"
+              },
+              {
+                type: "separator",
+                margin: "md"
+              },
+              {
+                type: "text",
+                text: "每週健康主題 × 好友互動 × 抽獎好禮",
+                size: "sm",
+                wrap: true,
+                color: "#218EC9"
+              }
+            ]
+          },
+
+          footer: {
+            type: "box",
+            layout: "vertical",
+            paddingAll: "15px",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                color: "#06C755",
+                action: {
+                  type: "uri",
+                  label: "立即參加活動",
+                  uri: ACTIVITY_URL
+                }
+              }
+            ]
+          }
+        }
+      };
+    }
+
+    // ===== 一鍵分享好友 =====
+
+    async function shareToFriends() {
+      if (!initialized) {
+        setStatus("LINE 尚未初始化");
+        return;
+      }
+
+      if (!liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+
+      if (!liff.isApiAvailable("shareTargetPicker")) {
+        setStatus("此環境不支援分享功能");
+        return;
+      }
+
+      shareBtn.disabled = true;
+      setStatus("正在開啟好友選擇介面...");
+
+      try {
+        const result = await liff.shareTargetPicker(
+          [createFlexMessage()],
+          { isMultiple: true }
+        );
+
+        if (result) {
+          setStatus("已完成 LINE 分享流程");
+        } else {
+          setStatus("分享視窗已關閉，請確認是否送出");
+        }
+
+      } catch (error) {
+        console.error("分享失敗", error);
+        setStatus("分享失敗：" + error.message);
+      } finally {
+        shareBtn.disabled = false;
+      }
+    }
+
+    // 開啟頁面後初始化
+    initializeLIFF();
+  </script>
+</body>
+</html>
